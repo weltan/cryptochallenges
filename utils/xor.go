@@ -1,8 +1,9 @@
-package main
+package utils
 
 import (
   "encoding/hex"
   "fmt"
+  "errors"
 )
 
 func XOR(x, y []byte) ([]byte) {
@@ -14,19 +15,13 @@ func XOR(x, y []byte) ([]byte) {
   return result
 }
 
-func hexXOR(first, second string) {
+func HexXOR(first, second string) ([]byte, error) {
   firstBytes, err1 := hex.DecodeString(first)
   secondBytes, err2 := hex.DecodeString(second)
   if err1 != nil || err2 != nil {
     fmt.Println("String decoding failed")
+    return nil, errors.New("String decoding failed")
   } else {
-    fmt.Println(hex.EncodeToString(XOR(firstBytes, secondBytes)))
+    return XOR(firstBytes, secondBytes), nil
   }
-}
-
-const a = "1c0111001f010100061a024b53535009181c"
-const b = "686974207468652062756c6c277320657965"
-
-func main() {
-  hexXOR(a, b)
 }
