@@ -7,7 +7,7 @@ import (
 )
 
 func XOR(x, y []byte) ([]byte) {
-  result := make([]byte, len(x))
+  var result = make([]byte, len(x))
   for i, _ := range x {
     var z int = int(x[i]) ^ int(y[i])
     result[i] = byte(z)

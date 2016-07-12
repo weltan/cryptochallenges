@@ -5,9 +5,10 @@ import (
 	//"encoding/hex"
 	//"unicode/utf8"
 	"strings"
-	//"strconv"
+	"strconv"
 	"fmt"
 	"math"
+	"sort"
 )
 
 const cipher = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
@@ -29,17 +30,29 @@ func letterFrequency(lowercaseLetter byte, s []byte) (float64) {
 func letterFreqProfile (s []byte) ([91]float64){
 	var profile [91]float64
 	for i := 65; i < 91; i++ {
-		profile[i] = letterFrequency(byte(i), s) 
+		profile[i] = letterFrequency(byte(i), s)
 	}
 	return profile
 }
 
+func badCharsScore (s []byte) float64 {
+	var score float64 = 0.0
+	for i := 0; i < len(s); i++ {
+		if s[i] < 32 || s[i] > 126 {
+			score += 0.05
+		}
+		if (s[i] > 64 && s[i] < 91) || (s[i] > 96 && s[i] < 123) {
+			score -= 0.05
+		}
+	}
+	return score
+}
 
 func englishScore(p [91] float64) float64 {
 	score := 0.0
-	
+
 	m = make(map[byte]float64)
-	 
+
 	m[65] = 0.0816
 	m[66] = 0.0149
 	m[67] = 0.0278
@@ -68,41 +81,58 @@ func englishScore(p [91] float64) float64 {
 	m[90] = 0.0007
 
 	for i := 65; i < 91; i++ {
-		score += math.Abs(m[byte(i)] - p[i]) 
+		score += math.Abs(m[byte(i)] - p[i])
 	}
 	return score
 }
 
+type Result struct {
+	result []byte
+	score float64
+}
+
+type Results []Result
+
+func (slice Results) Len() int {
+	return len(slice)
+}
+
+func (slice Results) Less(i, j int) bool {
+	return slice[i].score < slice[j].score
+}
+
+func (slice Results) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
 func main() {
-	score := 1000.0
-	var bestResult []byte 
+	var bestTenResults = make(Results, 10)
 	for i := 0; i < 16; i++ {
 		for j := 0; j < 16; j++ {
 			key := utils.ItoHexString(i) + utils.ItoHexString(j)
 			keyString := strings.Repeat(key, len(cipher) / 2)
-			
-			result, err := utils.HexXOR(cipher, keyString)
-			
-			
+
+			result, _ := utils.HexXOR(cipher, keyString)
+
 			freqProfile := letterFreqProfile(result)
+			badCharsScore := badCharsScore(result)
 
-			keyScore := englishScore(freqProfile)
+			keyScore := englishScore(freqProfile) + badCharsScore
 
-			if keyScore < score {
-				score = keyScore
-				bestResult = result
+			if result[0] == 67 && result[1] == 111 {
+				//fmt.Printf("the one: %s || score: %v || #%v\n\n", strconv.Quote(string(result)), keyScore, i*j)
 			}
-			
-			if err != nil {
-				fmt.Printf("%v", err)
-			} else {
-				if letterFrequency(101, result) > (0.1270 - 0.10) {
-					//fmt.Println(keyScore)
-					//fmt.Printf(">>>>>%s<<<<<\n\n", result)
-				}
+			if bestTenResults[0].score == 0.0 {
+				bestTenResults[0] = Result{result: result, score: keyScore}
+				sort.Sort(bestTenResults)
+			} else if keyScore < bestTenResults[9].score {
+				//fmt.Printf("good one: %s || score: %v || #%v\n\n", strconv.Quote(string(result)), keyScore, i*j)
+				bestTenResults[9] = Result{result: result, score: keyScore}
+				sort.Sort(bestTenResults)
 			}
 		}
 	}
-	fmt.Printf("Best result: %s\n", bestResult) 
-	fmt.Printf("Best score: %v\n", score) 
+	for i := 0; i < len(bestTenResults); i++ {
+		fmt.Printf("Result #%v [%v]: >>>>%s<<<<\n\n", i, bestTenResults[i].score, strconv.Quote(string(bestTenResults[i].result)))
+	}
 }
