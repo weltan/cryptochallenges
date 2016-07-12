@@ -4,18 +4,18 @@ import (
 	"github.com/weltan/cryptochallenges/utils"
 	//"encoding/hex"
 	//"unicode/utf8"
-	"strings"
-	"strconv"
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 const cipher = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 
 var m map[byte]float64
 
-func letterFrequency(lowercaseLetter byte, s []byte) (float64) {
+func letterFrequency(lowercaseLetter byte, s []byte) float64 {
 	uppercaseLetter := lowercaseLetter - 26
 	occurrences := 0
 	totalLength := len(s)
@@ -27,7 +27,7 @@ func letterFrequency(lowercaseLetter byte, s []byte) (float64) {
 	return float64(occurrences) / float64(totalLength)
 }
 
-func letterFreqProfile (s []byte) ([91]float64){
+func letterFreqProfile(s []byte) [91]float64 {
 	var profile [91]float64
 	for i := 65; i < 91; i++ {
 		profile[i] = letterFrequency(byte(i), s)
@@ -35,7 +35,7 @@ func letterFreqProfile (s []byte) ([91]float64){
 	return profile
 }
 
-func badCharsScore (s []byte) float64 {
+func badCharsScore(s []byte) float64 {
 	var score float64 = 0.0
 	for i := 0; i < len(s); i++ {
 		if s[i] < 32 || s[i] > 126 {
@@ -48,7 +48,7 @@ func badCharsScore (s []byte) float64 {
 	return score
 }
 
-func englishScore(p [91] float64) float64 {
+func englishScore(p [91]float64) float64 {
 	score := 0.0
 
 	m = make(map[byte]float64)
@@ -88,7 +88,7 @@ func englishScore(p [91] float64) float64 {
 
 type Result struct {
 	result []byte
-	score float64
+	score  float64
 }
 
 type Results []Result
@@ -110,7 +110,7 @@ func main() {
 	for i := 0; i < 16; i++ {
 		for j := 0; j < 16; j++ {
 			key := utils.ItoHexString(i) + utils.ItoHexString(j)
-			keyString := strings.Repeat(key, len(cipher) / 2)
+			keyString := strings.Repeat(key, len(cipher)/2)
 
 			result, _ := utils.HexXOR(cipher, keyString)
 
@@ -119,14 +119,10 @@ func main() {
 
 			keyScore := englishScore(freqProfile) + badCharsScore
 
-			if result[0] == 67 && result[1] == 111 {
-				//fmt.Printf("the one: %s || score: %v || #%v\n\n", strconv.Quote(string(result)), keyScore, i*j)
-			}
 			if bestTenResults[0].score == 0.0 {
 				bestTenResults[0] = Result{result: result, score: keyScore}
 				sort.Sort(bestTenResults)
 			} else if keyScore < bestTenResults[9].score {
-				//fmt.Printf("good one: %s || score: %v || #%v\n\n", strconv.Quote(string(result)), keyScore, i*j)
 				bestTenResults[9] = Result{result: result, score: keyScore}
 				sort.Sort(bestTenResults)
 			}
