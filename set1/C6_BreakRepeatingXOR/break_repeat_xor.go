@@ -3,8 +3,8 @@ package main
 import (
 	//"github.com/weltan/cryptochallenges/utils"
 	"fmt"
-	"log"
-	"os"
+	//"log"
+	//"os"
 )
 
 const cipherFileName = "/Users/ken/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/6.txt"
@@ -12,9 +12,15 @@ const cipherFileName = "/Users/ken/code/src/github.com/weltan/cryptochallenges/s
 func HammingDistance(a, b []byte) int {
 	hammingCount := 0
 	for i := 0; i < len(a); i++ {
-		if a[i] != b[i] {
-			hammingCount++
+		d := 0
+		var a byte = a[i] ^ b[i]
+		var j uint
+		for j = 0; j < 8; j++ {
+			if ((a >> j) % 2) != 0 {
+				d++
+			}
 		}
+		hammingCount += d
 	}
 	return hammingCount
 }
@@ -35,9 +41,4 @@ func main() {
 	a := "this is a test"
 	b := "wokka wokka!!!"
 	fmt.Println(StringHammingDistance(a, b))
-
-	var c byte = 109
-	var d byte = 219
-
-	fmt.Println((c >> 6) ^ (d >> 6))
 }
