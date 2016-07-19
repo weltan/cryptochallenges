@@ -6,9 +6,11 @@ import (
 	"github.com/weltan/cryptochallenges/utils"
 	"io/ioutil"
 	"sort"
+	"math"
 )
 
 const cipherFileName = "/Users/ken/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/6.txt"
+const cipherFileNameWin = "C:/Users/Ken/Documents/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/6.txt"
 
 type KeySize struct {
 	keySize int
@@ -48,10 +50,7 @@ func transposePartitionedBlocks(blocks [][]byte) [][]byte {
 	return tBlocks
 }
 
-func main() {
-	base64Buf, _ := ioutil.ReadFile(cipherFileName)
-	buf, _ := base64.StdEncoding.DecodeString(string(base64Buf))
-
+func findLikelyKeySizes(buf []byte) []KeySize {
 	keySizes := make(KeySizes, 41)
 	for keySize := 2; keySize < 41; keySize++ {
 		firstBlock := buf[0:keySize]
@@ -61,9 +60,16 @@ func main() {
 		keySizes[keySize] = KeySize{keySize: keySize, score: normalized}
 	}
 	sort.Sort(keySizes)
+	return keySizes[2:]
+}
 
-	// for each key size,
-	for _, keySize := range keySizes[2:6] {
+func main() {
+	base64Buf, _ := ioutil.ReadFile(cipherFileNameWin)
+	buf, _ := base64.StdEncoding.DecodeString(string(base64Buf))
+	keySizes := findLikelyKeySizes(buf)
+
+	// for each key size, partition, transpose and find likely XOR key
+	for _, keySize := range keySizes[0:10] {
 		fmt.Println("------------------------------------")
 		fmt.Println("Currently looking at keySize ", keySize.keySize)
 		fmt.Println("------------------------------------")
@@ -72,20 +78,50 @@ func main() {
 		blocks := partitionBlocks(buf, keySize.keySize)
 		transposedBlocks := transposePartitionedBlocks(blocks)
 
-		// find the single-character byte that produces the best score once XOR'ed
+		// find the top 3 single-character bytes that produce the best scores once XOR'ed
 		var likelyKeys [][]byte
 		for i := 0; i < len(transposedBlocks); i++ {
-			var results []utils.Result = utils.FindXORBytesTopResults(transposedBlocks[i], 3)
+			topXResults := 1
+			var results []utils.Result = utils.FindXORBytesTopResults(transposedBlocks[i], topXResults)
 			var ks []byte
-			var result utils.Result
-			result.k
-			for _, result = range results {
-				ks := append(ks, result.k)
+			for j := 0; j < len(results); j++ {
+				ks = append(ks, results[j].Key)
 			}
 			likelyKeys = append(likelyKeys, ks)
 		}
 
 		fmt.Println("Likely key:", likelyKeys)
+		for i := 0; i < int(math.Pow(float64(len(likelyKeys[0])), float64(len(likelyKeys)))); i++ {
+				//fmt.Println("i:",i)
+				var key []byte
+				k := 0
+				prevBase := 0
+				for j := len(likelyKeys)-1; j > -1; j-- {
+					// calculate jth index
+					base := int(math.Pow(float64(len(likelyKeys[0])), float64(j)))
+
+					ith := (i - prevBase) / base
+					prevBase += ith * base
+					//fmt.Printf("[%v]", ith)
+					key = append(key, likelyKeys[k][ith])
+					k += 1
+				}
+				//fmt.Println("key", key)
+				resultingDecryptedBytes := utils.XORRepeatingKey(buf, key)
+
+				// reverse decrypted bytes to see if you get original base64 string
+				encryptedBytes := utils.XORRepeatingKey(resultingDecryptedBytes, key)
+				cipher := []byte(base64.StdEncoding.EncodeToString(encryptedBytes))
+				equal := true
+				for i := 0; i < 100; i++ {
+					if cipher[i] != base64Buf[i] {
+						equal = false
+					}
+				}
+				if equal {
+					fmt.Println("output: ", string(resultingDecryptedBytes[0:200]))
+				}
+		}
 		//resultingDecryptedBytes := utils.XORRepeatingKey(buf, likelyKey)
 		//fmt.Println("output: ", string(resultingDecryptedBytes[0:200]))
 	}

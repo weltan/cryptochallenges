@@ -85,9 +85,9 @@ func englishScore(p [91]float64) float64 {
 }
 
 type Result struct {
-	result []byte
-	score  float64
-	key    byte
+	Result []byte
+	Score  float64
+	Key    byte
 }
 
 type Results []Result
@@ -97,7 +97,7 @@ func (slice Results) Len() int {
 }
 
 func (slice Results) Less(i, j int) bool {
-	return slice[i].score < slice[j].score
+	return slice[i].Score < slice[j].Score
 }
 
 func (slice Results) Swap(i, j int) {
@@ -118,15 +118,15 @@ func FindXOR(c string) ([]byte, float64, byte) {
 
 		keyScore := englishScore(freqProfile) + badCharsScore
 
-		if bestTenResults[0].score == 0.0 {
-			bestTenResults[0] = Result{result: result, score: keyScore, key: keyByte}
+		if bestTenResults[0].Score == 0.0 {
+			bestTenResults[0] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
-		} else if keyScore < bestTenResults[9].score {
-			bestTenResults[9] = Result{result: result, score: keyScore, key: keyByte}
+		} else if keyScore < bestTenResults[9].Score {
+			bestTenResults[9] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
 		}
 	}
-	return bestTenResults[0].result, bestTenResults[0].score, bestTenResults[0].key
+	return bestTenResults[0].Result, bestTenResults[0].Score, bestTenResults[0].Key
 }
 
 func FindXORBytes(cipher []byte) ([]byte, float64, byte) {
@@ -141,15 +141,15 @@ func FindXORBytes(cipher []byte) ([]byte, float64, byte) {
 
 		keyScore := englishScore(freqProfile) + badCharsScore
 
-		if bestTenResults[0].score == 0.0 {
-			bestTenResults[0] = Result{result: result, score: keyScore, key: keyByte}
+		if bestTenResults[0].Score == 0.0 {
+			bestTenResults[0] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
-		} else if keyScore < bestTenResults[9].score {
-			bestTenResults[9] = Result{result: result, score: keyScore, key: keyByte}
+		} else if keyScore < bestTenResults[9].Score {
+			bestTenResults[9] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
 		}
 	}
-	return bestTenResults[0].result, bestTenResults[0].score, bestTenResults[0].key
+	return bestTenResults[0].Result, bestTenResults[0].Score, bestTenResults[0].Key
 }
 
 func FindXORBytesTopResults(cipher []byte, topX int) Results {
@@ -164,11 +164,11 @@ func FindXORBytesTopResults(cipher []byte, topX int) Results {
 
 		keyScore := englishScore(freqProfile) + badCharsScore
 
-		if bestTenResults[0].score == 0.0 {
-			bestTenResults[0] = Result{result: result, score: keyScore, key: keyByte}
+		if bestTenResults[0].Score == 0.0 {
+			bestTenResults[0] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
-		} else if keyScore < bestTenResults[9].score {
-			bestTenResults[9] = Result{result: result, score: keyScore, key: keyByte}
+		} else if keyScore < bestTenResults[9].Score {
+			bestTenResults[9] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
 		}
 	}
