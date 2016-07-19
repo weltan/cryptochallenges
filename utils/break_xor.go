@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"sort"
 	"strconv"
-	"strings"
 )
 
 var m map[byte]float64
@@ -87,6 +87,7 @@ func englishScore(p [91]float64) float64 {
 type Result struct {
 	result []byte
 	score  float64
+	key    byte
 }
 
 type Results []Result
@@ -104,30 +105,74 @@ func (slice Results) Swap(i, j int) {
 }
 
 // given an arbitrary cipher string that has been X'ORed with characters, find the key
-func FindXOR(cipher string) ([]byte, float64) {
+func FindXOR(c string) ([]byte, float64, byte) {
+	cipher, _ := hex.DecodeString(c)
 	var bestTenResults = make(Results, 10)
-	for i := 0; i < 16; i++ {
-		for j := 0; j < 16; j++ {
-			key := ItoHexString(i) + ItoHexString(j)
-			keyString := strings.Repeat(key, len(cipher)/2)
+	var key int
+	for key = 0; key < 256; key++ {
+		keyByte := byte(key)
+		result := XORKeyByte(cipher, keyByte)
 
-			result, _ := HexXOR(cipher, keyString)
+		freqProfile := letterFreqProfile(result)
+		badCharsScore := badCharsScore(result)
 
-			freqProfile := letterFreqProfile(result)
-			badCharsScore := badCharsScore(result)
+		keyScore := englishScore(freqProfile) + badCharsScore
 
-			keyScore := englishScore(freqProfile) + badCharsScore
-
-			if bestTenResults[0].score == 0.0 {
-				bestTenResults[0] = Result{result: result, score: keyScore}
-				sort.Sort(bestTenResults)
-			} else if keyScore < bestTenResults[9].score {
-				bestTenResults[9] = Result{result: result, score: keyScore}
-				sort.Sort(bestTenResults)
-			}
+		if bestTenResults[0].score == 0.0 {
+			bestTenResults[0] = Result{result: result, score: keyScore, key: keyByte}
+			sort.Sort(bestTenResults)
+		} else if keyScore < bestTenResults[9].score {
+			bestTenResults[9] = Result{result: result, score: keyScore, key: keyByte}
+			sort.Sort(bestTenResults)
 		}
 	}
-	return bestTenResults[0].result, bestTenResults[0].score
+	return bestTenResults[0].result, bestTenResults[0].score, bestTenResults[0].key
+}
+
+func FindXORBytes(cipher []byte) ([]byte, float64, byte) {
+	var bestTenResults = make(Results, 10)
+	var key int
+	for key = 0; key < 256; key++ {
+		keyByte := byte(key)
+		result := XORKeyByte(cipher, keyByte)
+
+		freqProfile := letterFreqProfile(result)
+		badCharsScore := badCharsScore(result)
+
+		keyScore := englishScore(freqProfile) + badCharsScore
+
+		if bestTenResults[0].score == 0.0 {
+			bestTenResults[0] = Result{result: result, score: keyScore, key: keyByte}
+			sort.Sort(bestTenResults)
+		} else if keyScore < bestTenResults[9].score {
+			bestTenResults[9] = Result{result: result, score: keyScore, key: keyByte}
+			sort.Sort(bestTenResults)
+		}
+	}
+	return bestTenResults[0].result, bestTenResults[0].score, bestTenResults[0].key
+}
+
+func FindXORBytesTopResults(cipher []byte, topX int) Results {
+	var bestTenResults = make(Results, 10)
+	var key int
+	for key = 0; key < 256; key++ {
+		keyByte := byte(key)
+		result := XORKeyByte(cipher, keyByte)
+
+		freqProfile := letterFreqProfile(result)
+		badCharsScore := badCharsScore(result)
+
+		keyScore := englishScore(freqProfile) + badCharsScore
+
+		if bestTenResults[0].score == 0.0 {
+			bestTenResults[0] = Result{result: result, score: keyScore, key: keyByte}
+			sort.Sort(bestTenResults)
+		} else if keyScore < bestTenResults[9].score {
+			bestTenResults[9] = Result{result: result, score: keyScore, key: keyByte}
+			sort.Sort(bestTenResults)
+		}
+	}
+	return bestTenResults[0:topX]
 }
 
 func PrintByteArray(b []byte, s float64) {

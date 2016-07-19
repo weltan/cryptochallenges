@@ -1,11 +1,12 @@
 package utils
 
 import (
+	"encoding/hex"
 	"strconv"
 )
 
-func ItoHexString(i int) (string) {
-	if i < 10  {
+func ItoHexString(i int) string {
+	if i < 10 {
 		return strconv.Itoa(i)
 	} else {
 		switch i {
@@ -24,4 +25,8 @@ func ItoHexString(i int) (string) {
 		}
 	}
 	return ""
+}
+
+func BytesToHexString(result []byte) string {
+	return hex.EncodeToString(result)
 }

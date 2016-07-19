@@ -15,6 +15,23 @@ func XOR(x, y []byte) []byte {
 	return result
 }
 
+func XORKeyByte(x []byte, key byte) []byte {
+	var result = make([]byte, len(x))
+	for i, _ := range x {
+		result[i] = x[i] ^ key
+	}
+	return result
+}
+
+func XORRepeatingKey(target []byte, repeatingKey []byte) []byte {
+	var repeatingKeyWithSizeTarget []byte
+	for i := 0; i < len(target); i++ {
+		keyIdx := i % len(repeatingKey)
+		repeatingKeyWithSizeTarget = append(repeatingKeyWithSizeTarget, repeatingKey[keyIdx])
+	}
+	return XOR(target, repeatingKeyWithSizeTarget)
+}
+
 func HexXOR(first, second string) ([]byte, error) {
 	firstBytes, err1 := hex.DecodeString(first)
 	secondBytes, err2 := hex.DecodeString(second)
