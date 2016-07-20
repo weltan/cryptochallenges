@@ -51,35 +51,52 @@ func englishScore(p [91]float64) float64 {
 
 	m = make(map[byte]float64)
 
-	m[65] = 0.0816
-	m[66] = 0.0149
-	m[67] = 0.0278
-	m[68] = 0.0425
-	m[69] = 0.1270
-	m[70] = 0.0222
-	m[71] = 0.0201
-	m[72] = 0.0609
-	m[73] = 0.0696
-	m[74] = 0.0015
-	m[75] = 0.0077
-	m[76] = 0.0402
-	m[77] = 0.0240
-	m[78] = 0.0674
-	m[79] = 0.0750
-	m[80] = 0.0192
-	m[81] = 0.0009
-	m[82] = 0.0598
-	m[83] = 0.0632
-	m[84] = 0.0905
-	m[85] = 0.0275
-	m[86] = 0.0097
-	m[87] = 0.0236
-	m[88] = 0.001
-	m[89] = 0.0197
-	m[90] = 0.0007
+	m[65] = 8.167
+	m[66] = 1.492
+	m[67] = 2.782
+	m[68] = 4.253
+	m[69] = 12.702
+	m[70] = 2.228
+	m[71] = 2.015
+	m[72] = 6.094
+	m[73] = 6.966
+	m[74] = 0.153
+	m[75] = 0.772
+	m[76] = 4.025
+	m[77] = 2.406
+	m[78] = 6.749
+	m[79] = 7.507
+	m[80] = 1.929
+	m[81] = 0.095
+	m[82] = 5.987
+	m[83] = 6.327
+	m[84] = 9.056
+	m[85] = 2.758
+	m[86] = 2.360
+	m[87] = 2.361
+	m[88] = 0.150
+	m[89] = 1.974
+	m[90] = 0.074
 
 	for i := 65; i < 91; i++ {
 		score += math.Abs(m[byte(i)] - p[i])
+	}
+	return score
+}
+
+var EnglishLetterFrequencies = map[string]float64{
+	"a": 8.167, "b": 1.492, "c": 2.782, "d": 4.253, "e": 12.702,
+	"f": 2.228, "g": 2.015, "h": 6.094, "i": 6.966, "j": 0.153,
+	"k": 0.772, "l": 4.025, "m": 2.406, "n": 6.749, "o": 7.507,
+	"p": 1.929, "q": 0.095, "r": 5.987, "s": 6.327, "t": 9.056,
+	"u": 2.758, "v": 2.360, "w": 2.361, "x": 0.150, "y": 1.974,
+	"z": 0.074, " ": 13.0, // space is slightly more frequent than (e)
+}
+
+func EnglishScore(stringBytes []byte) float64 {
+	var score float64
+	for i := 0; i < len(stringBytes); i++ {
+		score += EnglishLetterFrequencies[string(stringBytes[i])]
 	}
 	return score
 }
@@ -97,7 +114,7 @@ func (slice Results) Len() int {
 }
 
 func (slice Results) Less(i, j int) bool {
-	return slice[i].Score < slice[j].Score
+	return slice[i].Score > slice[j].Score
 }
 
 func (slice Results) Swap(i, j int) {
@@ -113,15 +130,17 @@ func FindXOR(c string) ([]byte, float64, byte) {
 		keyByte := byte(key)
 		result := XORKeyByte(cipher, keyByte)
 
-		freqProfile := letterFreqProfile(result)
-		badCharsScore := badCharsScore(result)
+		//freqProfile := letterFreqProfile(result)
+		//badCharsScore := badCharsScore(result)
 
-		keyScore := englishScore(freqProfile) + badCharsScore
+		//keyScore := englishScore(freqProfile) + badCharsScore
+
+		keyScore := EnglishScore(result)
 
 		if bestTenResults[0].Score == 0.0 {
 			bestTenResults[0] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
-		} else if keyScore < bestTenResults[9].Score {
+		} else if keyScore > bestTenResults[9].Score {
 			bestTenResults[9] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
 		}
@@ -136,15 +155,17 @@ func FindXORBytes(cipher []byte) ([]byte, float64, byte) {
 		keyByte := byte(key)
 		result := XORKeyByte(cipher, keyByte)
 
-		freqProfile := letterFreqProfile(result)
-		badCharsScore := badCharsScore(result)
+		//freqProfile := letterFreqProfile(result)
+		//badCharsScore := badCharsScore(result)
 
-		keyScore := englishScore(freqProfile) + badCharsScore
+		//keyScore := englishScore(freqProfile) + badCharsScore
+
+		keyScore := EnglishScore(result)
 
 		if bestTenResults[0].Score == 0.0 {
 			bestTenResults[0] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
-		} else if keyScore < bestTenResults[9].Score {
+		} else if keyScore > bestTenResults[9].Score {
 			bestTenResults[9] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
 		}
@@ -159,15 +180,17 @@ func FindXORBytesTopResults(cipher []byte, topX int) Results {
 		keyByte := byte(key)
 		result := XORKeyByte(cipher, keyByte)
 
-		freqProfile := letterFreqProfile(result)
-		badCharsScore := badCharsScore(result)
+		//freqProfile := letterFreqProfile(result)
+		//badCharsScore := badCharsScore(result)
 
-		keyScore := englishScore(freqProfile) + badCharsScore
+		//keyScore := englishScore(freqProfile) + badCharsScore
+
+		keyScore := EnglishScore(result)
 
 		if bestTenResults[0].Score == 0.0 {
 			bestTenResults[0] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
-		} else if keyScore < bestTenResults[9].Score {
+		} else if keyScore > bestTenResults[9].Score {
 			bestTenResults[9] = Result{Result: result, Score: keyScore, Key: keyByte}
 			sort.Sort(bestTenResults)
 		}

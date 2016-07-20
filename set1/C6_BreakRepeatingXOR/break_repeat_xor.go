@@ -3,14 +3,16 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/weltan/cryptochallenges/utils"
 	"io/ioutil"
-	"sort"
 	"math"
+	"sort"
+
+	"github.com/weltan/cryptochallenges/utils"
 )
 
 const cipherFileName = "/Users/ken/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/6.txt"
 const cipherFileNameWin = "C:/Users/Ken/Documents/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/6.txt"
+const cipherFileNameWinTest = "C:/Users/Ken/Documents/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/test.txt"
 
 type KeySize struct {
 	keySize int
@@ -64,12 +66,33 @@ func findLikelyKeySizes(buf []byte) []KeySize {
 }
 
 func main() {
+
+	s := "This is a test."
+	sBytes := []byte(s)
+	key := []byte{65, 67}
+	ciphertext := utils.XORRepeatingKey(sBytes, key)
+	fmt.Println("ciphertext in bytes1:", ciphertext)
+	ciphertextBase64 := base64.StdEncoding.EncodeToString(ciphertext)
+	fmt.Println("ciphertext as base64:", ciphertextBase64)
+	/*
+		dst := make([]byte, base64.StdEncoding.EncodedLen(len(ciphertext)))
+		base64.StdEncoding.Encode(dst, ciphertext)
+		ioutil.WriteFile(cipherFileNameWinTest, dst, 0444)
+	*/
 	base64Buf, _ := ioutil.ReadFile(cipherFileNameWin)
 	buf, _ := base64.StdEncoding.DecodeString(string(base64Buf))
+	//fmt.Println("ciphertext in bytes2:", buf)
+	//decryptedBytes := utils.XORRepeatingKey(buf, key)
+	//fmt.Println("Plaintext:", string(decryptedBytes))
+
 	keySizes := findLikelyKeySizes(buf)
+	fmt.Println(keySizes)
+
+	var highScore float64
+	highScoreText := ""
 
 	// for each key size, partition, transpose and find likely XOR key
-	for _, keySize := range keySizes[0:10] {
+	for _, keySize := range keySizes[0:20] {
 		fmt.Println("------------------------------------")
 		fmt.Println("Currently looking at keySize ", keySize.keySize)
 		fmt.Println("------------------------------------")
@@ -90,39 +113,53 @@ func main() {
 			likelyKeys = append(likelyKeys, ks)
 		}
 
-		fmt.Println("Likely key:", likelyKeys)
+		//fmt.Println("Likely key:", likelyKeys)
 		for i := 0; i < int(math.Pow(float64(len(likelyKeys[0])), float64(len(likelyKeys)))); i++ {
-				//fmt.Println("i:",i)
-				var key []byte
-				k := 0
-				prevBase := 0
-				for j := len(likelyKeys)-1; j > -1; j-- {
-					// calculate jth index
-					base := int(math.Pow(float64(len(likelyKeys[0])), float64(j)))
+			//fmt.Println("i:",i)
+			var key []byte
+			k := 0
+			prevBase := 0
+			for j := len(likelyKeys) - 1; j > -1; j-- {
+				// calculate jth index
+				base := int(math.Pow(float64(len(likelyKeys[0])), float64(j)))
 
-					ith := (i - prevBase) / base
-					prevBase += ith * base
-					//fmt.Printf("[%v]", ith)
-					key = append(key, likelyKeys[k][ith])
-					k += 1
-				}
-				//fmt.Println("key", key)
-				resultingDecryptedBytes := utils.XORRepeatingKey(buf, key)
+				ith := (i - prevBase) / base
+				prevBase += ith * base
+				//fmt.Printf("[%v]", ith)
+				key = append(key, likelyKeys[k][ith])
+				k++
+			}
+			//fmt.Println("prospective key:", key)
+			resultingDecryptedBytes := utils.XORRepeatingKey(buf, key)
+			score := utils.EnglishScore(resultingDecryptedBytes)
+			if score > highScore {
+				highScore = score
+				highScoreText = string(resultingDecryptedBytes)
+				fmt.Println("new high score!:", string(resultingDecryptedBytes[0:15]))
+			}
+			//fmt.Println("output: ", string(resultingDecryptedBytes[0:15]))
+			/*
+				fmt.Println("resultingDecrypteBytes:", resultingDecryptedBytes)
+				fmt.Println("decryptedBytes:", decryptedBytes)
 
 				// reverse decrypted bytes to see if you get original base64 string
-				encryptedBytes := utils.XORRepeatingKey(resultingDecryptedBytes, key)
+				encryptedBytes := utils.XORRepeatingKey(decryptedBytes, key)
 				cipher := []byte(base64.StdEncoding.EncodeToString(encryptedBytes))
 				equal := true
-				for i := 0; i < 100; i++ {
+				for i := 0; i < len(cipher); i++ {
+					//fmt.Println(string(base64Buf))
+					//fmt.Println(string(cipher))
+					//fmt.Println("doing test", cipher[i], base64Buf[i])
 					if cipher[i] != base64Buf[i] {
+						fmt.Println("not equal!")
 						equal = false
 					}
 				}
 				if equal {
-					fmt.Println("output: ", string(resultingDecryptedBytes[0:200]))
+					fmt.Println("output: ", string(resultingDecryptedBytes[0:15]))
 				}
+			*/
 		}
-		//resultingDecryptedBytes := utils.XORRepeatingKey(buf, likelyKey)
-		//fmt.Println("output: ", string(resultingDecryptedBytes[0:200]))
 	}
+	fmt.Println("output: ", highScoreText)
 }
