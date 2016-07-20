@@ -55,10 +55,13 @@ func transposePartitionedBlocks(blocks [][]byte) [][]byte {
 func findLikelyKeySizes(buf []byte) []KeySize {
 	keySizes := make(KeySizes, 41)
 	for keySize := 2; keySize < 41; keySize++ {
-		firstBlock := buf[0:keySize]
-		secondBlock := buf[keySize : keySize+keySize]
-		hDist := utils.HammingDistance(firstBlock, secondBlock)
-		normalized := float64(hDist) / float64(keySize)
+		blocks := partitionBlocks(buf, keySize)
+		hDist := 0
+		for i := 0; i < len(blocks)-1; i++ {
+			hDist += utils.HammingDistance(blocks[i], blocks[i+1])
+		}
+		avgDist := hDist / len(blocks)
+		normalized := float64(avgDist) / float64(keySize)
 		keySizes[keySize] = KeySize{keySize: keySize, score: normalized}
 	}
 	sort.Sort(keySizes)
@@ -66,33 +69,17 @@ func findLikelyKeySizes(buf []byte) []KeySize {
 }
 
 func main() {
-
-	s := "This is a test."
-	sBytes := []byte(s)
-	key := []byte{65, 67}
-	ciphertext := utils.XORRepeatingKey(sBytes, key)
-	fmt.Println("ciphertext in bytes1:", ciphertext)
-	ciphertextBase64 := base64.StdEncoding.EncodeToString(ciphertext)
-	fmt.Println("ciphertext as base64:", ciphertextBase64)
-	/*
-		dst := make([]byte, base64.StdEncoding.EncodedLen(len(ciphertext)))
-		base64.StdEncoding.Encode(dst, ciphertext)
-		ioutil.WriteFile(cipherFileNameWinTest, dst, 0444)
-	*/
 	base64Buf, _ := ioutil.ReadFile(cipherFileNameWin)
 	buf, _ := base64.StdEncoding.DecodeString(string(base64Buf))
-	//fmt.Println("ciphertext in bytes2:", buf)
-	//decryptedBytes := utils.XORRepeatingKey(buf, key)
-	//fmt.Println("Plaintext:", string(decryptedBytes))
 
 	keySizes := findLikelyKeySizes(buf)
-	fmt.Println(keySizes)
 
 	var highScore float64
 	highScoreText := ""
+	var highScoreKey []byte
 
 	// for each key size, partition, transpose and find likely XOR key
-	for _, keySize := range keySizes[0:20] {
+	for _, keySize := range keySizes[0:3] {
 		fmt.Println("------------------------------------")
 		fmt.Println("Currently looking at keySize ", keySize.keySize)
 		fmt.Println("------------------------------------")
@@ -101,7 +88,7 @@ func main() {
 		blocks := partitionBlocks(buf, keySize.keySize)
 		transposedBlocks := transposePartitionedBlocks(blocks)
 
-		// find the top 3 single-character bytes that produce the best scores once XOR'ed
+		// find the top single-character byte that produce the best scores once XOR'ed
 		var likelyKeys [][]byte
 		for i := 0; i < len(transposedBlocks); i++ {
 			topXResults := 1
@@ -113,9 +100,10 @@ func main() {
 			likelyKeys = append(likelyKeys, ks)
 		}
 
-		//fmt.Println("Likely key:", likelyKeys)
+		// iterate through all combinations of the likely keys, using an arbitrary base system.
+		// pretty cool, but since topXResults = 1, this doesn't do anything really.
+		// builds a key
 		for i := 0; i < int(math.Pow(float64(len(likelyKeys[0])), float64(len(likelyKeys)))); i++ {
-			//fmt.Println("i:",i)
 			var key []byte
 			k := 0
 			prevBase := 0
@@ -125,41 +113,21 @@ func main() {
 
 				ith := (i - prevBase) / base
 				prevBase += ith * base
-				//fmt.Printf("[%v]", ith)
 				key = append(key, likelyKeys[k][ith])
 				k++
 			}
-			//fmt.Println("prospective key:", key)
+
 			resultingDecryptedBytes := utils.XORRepeatingKey(buf, key)
 			score := utils.EnglishScore(resultingDecryptedBytes)
 			if score > highScore {
+				highScoreKey = key
 				highScore = score
 				highScoreText = string(resultingDecryptedBytes)
 				fmt.Println("new high score!:", string(resultingDecryptedBytes[0:15]))
 			}
-			//fmt.Println("output: ", string(resultingDecryptedBytes[0:15]))
-			/*
-				fmt.Println("resultingDecrypteBytes:", resultingDecryptedBytes)
-				fmt.Println("decryptedBytes:", decryptedBytes)
-
-				// reverse decrypted bytes to see if you get original base64 string
-				encryptedBytes := utils.XORRepeatingKey(decryptedBytes, key)
-				cipher := []byte(base64.StdEncoding.EncodeToString(encryptedBytes))
-				equal := true
-				for i := 0; i < len(cipher); i++ {
-					//fmt.Println(string(base64Buf))
-					//fmt.Println(string(cipher))
-					//fmt.Println("doing test", cipher[i], base64Buf[i])
-					if cipher[i] != base64Buf[i] {
-						fmt.Println("not equal!")
-						equal = false
-					}
-				}
-				if equal {
-					fmt.Println("output: ", string(resultingDecryptedBytes[0:15]))
-				}
-			*/
 		}
 	}
 	fmt.Println("output: ", highScoreText)
+	fmt.Println("key:", highScoreKey)
+	fmt.Print("keySize:", len(highScoreKey))
 }
