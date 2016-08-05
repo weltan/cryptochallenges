@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/weltan/cryptochallenges/utils"
 	"io/ioutil"
 	"math"
 	"sort"
-
-	"github.com/weltan/cryptochallenges/utils"
 )
 
 const cipherFileName = "/Users/ken/code/src/github.com/weltan/cryptochallenges/set1/C6_BreakRepeatingXOR/6.txt"

@@ -1,16 +1,21 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"github.com/weltan/cryptochallenges/utils"
+	"log"
+)
 
 const cipherFileName = "/Users/ken/code/src/github.com/weltan/cryptochallenges/set1/C7_AESECB/7.txt"
 const cipherFileNameWin = "C:/Users/Ken/Documents/code/src/github.com/weltan/cryptochallenges/set1/C7_AESECB/7.txt"
 
-// Nk AES-128 key length (in bytes)
+// Nk AES-128 key length (in words)
 var aes128KeySize = 4
 var aes192KeySize = 6
 var aes256KeySize = 8
 
-// Nb AES-128 block size (in bytes)
+// Nb AES block size (in words)
 const aesBlockSize = 4
 
 // Nr AES-128 number of rounds
@@ -162,17 +167,44 @@ var multi14 = [256]byte{
 	'\x37', '\x39', '\x2b', '\x25', '\x0f', '\x01', '\x13', '\x1d', '\x47', '\x49', '\x5b', '\x55', '\x7f', '\x71', '\x63', '\x6d',
 	'\xd7', '\xd9', '\xcb', '\xc5', '\xef', '\xe1', '\xf3', '\xfd', '\xa7', '\xa9', '\xbb', '\xb5', '\x9f', '\x91', '\x83', '\x8d'}
 
-// State this is a 4 by 4 AES 32-byte 2D array.
-type State [aesBlockSize][aesBlockSize]byte
+var rcon = [256]byte{
+	'\x8d', '\x01', '\x02', '\x04', '\x08', '\x10', '\x20', '\x40', '\x80', '\x1b', '\x36', '\x6c', '\xd8', '\xab', '\x4d', '\x9a',
+	'\x2f', '\x5e', '\xbc', '\x63', '\xc6', '\x97', '\x35', '\x6a', '\xd4', '\xb3', '\x7d', '\xfa', '\xef', '\xc5', '\x91', '\x39',
+	'\x72', '\xe4', '\xd3', '\xbd', '\x61', '\xc2', '\x9f', '\x25', '\x4a', '\x94', '\x33', '\x66', '\xcc', '\x83', '\x1d', '\x3a',
+	'\x74', '\xe8', '\xcb', '\x8d', '\x01', '\x02', '\x04', '\x08', '\x10', '\x20', '\x40', '\x80', '\x1b', '\x36', '\x6c', '\xd8',
+	'\xab', '\x4d', '\x9a', '\x2f', '\x5e', '\xbc', '\x63', '\xc6', '\x97', '\x35', '\x6a', '\xd4', '\xb3', '\x7d', '\xfa', '\xef',
+	'\xc5', '\x91', '\x39', '\x72', '\xe4', '\xd3', '\xbd', '\x61', '\xc2', '\x9f', '\x25', '\x4a', '\x94', '\x33', '\x66', '\xcc',
+	'\x83', '\x1d', '\x3a', '\x74', '\xe8', '\xcb', '\x8d', '\x01', '\x02', '\x04', '\x08', '\x10', '\x20', '\x40', '\x80', '\x1b',
+	'\x36', '\x6c', '\xd8', '\xab', '\x4d', '\x9a', '\x2f', '\x5e', '\xbc', '\x63', '\xc6', '\x97', '\x35', '\x6a', '\xd4', '\xb3',
+	'\x7d', '\xfa', '\xef', '\xc5', '\x91', '\x39', '\x72', '\xe4', '\xd3', '\xbd', '\x61', '\xc2', '\x9f', '\x25', '\x4a', '\x94',
+	'\x33', '\x66', '\xcc', '\x83', '\x1d', '\x3a', '\x74', '\xe8', '\xcb', '\x8d', '\x01', '\x02', '\x04', '\x08', '\x10', '\x20',
+	'\x40', '\x80', '\x1b', '\x36', '\x6c', '\xd8', '\xab', '\x4d', '\x9a', '\x2f', '\x5e', '\xbc', '\x63', '\xc6', '\x97', '\x35',
+	'\x6a', '\xd4', '\xb3', '\x7d', '\xfa', '\xef', '\xc5', '\x91', '\x39', '\x72', '\xe4', '\xd3', '\xbd', '\x61', '\xc2', '\x9f',
+	'\x25', '\x4a', '\x94', '\x33', '\x66', '\xcc', '\x83', '\x1d', '\x3a', '\x74', '\xe8', '\xcb', '\x8d', '\x01', '\x02', '\x04',
+	'\x08', '\x10', '\x20', '\x40', '\x80', '\x1b', '\x36', '\x6c', '\xd8', '\xab', '\x4d', '\x9a', '\x2f', '\x5e', '\xbc', '\x63',
+	'\xc6', '\x97', '\x35', '\x6a', '\xd4', '\xb3', '\x7d', '\xfa', '\xef', '\xc5', '\x91', '\x39', '\x72', '\xe4', '\xd3', '\xbd',
+	'\x61', '\xc2', '\x9f', '\x25', '\x4a', '\x94', '\x33', '\x66', '\xcc', '\x83', '\x1d', '\x3a', '\x74', '\xe8', '\xcb', '\x8d'}
 
-var sampleState = State{[4]byte{242, 83, 0, 0}, [4]byte{10, 83, 0, 0}, [4]byte{34, 83, 0, 0}, [4]byte{92, 83, 0, 0}}
+// State this is a 4 by 4 AES 32-byte 2D array.
+type State [4][4]byte
 
 // SubBytes funciton for AES
 func SubBytes(state State) State {
 	var statePrime State
-	for row := 0; row < aesBlockSize; row++ {
-		for col := 0; col < aesBlockSize; col++ {
+	for row := 0; row < 4; row++ {
+		for col := 0; col < 4; col++ {
 			statePrime[row][col] = sbox[state[row][col]]
+		}
+	}
+	return statePrime
+}
+
+// InvSubBytes funciton for AES
+func InvSubBytes(state State) State {
+	var statePrime State
+	for row := 0; row < 4; row++ {
+		for col := 0; col < 4; col++ {
+			statePrime[row][col] = invSbox[state[row][col]]
 		}
 	}
 	return statePrime
@@ -181,12 +213,27 @@ func SubBytes(state State) State {
 // ShiftRows function for AES
 func ShiftRows(state State) State {
 	var statePrime State
-	for row := 0; row < aesBlockSize; row++ {
-		for col := 0; col < aesBlockSize; col++ {
+	for row := 0; row < 4; row++ {
+		for col := 0; col < 4; col++ {
 			if row == 0 {
 				statePrime[row][col] = state[row][col]
 			} else {
-				shiftCol := (col + row) % aesBlockSize
+				shiftCol := (col + row) % 4
+				statePrime[row][col] = state[row][shiftCol]
+			}
+		}
+	}
+	return statePrime
+}
+
+func InvShiftRows(state State) State {
+	var statePrime State
+	for row := 0; row < 4; row++ {
+		for col := 0; col < 4; col++ {
+			if row == 0 {
+				statePrime[row][col] = state[row][col]
+			} else {
+				shiftCol := (col + 4 - row) % 4
 				statePrime[row][col] = state[row][shiftCol]
 			}
 		}
@@ -197,7 +244,7 @@ func ShiftRows(state State) State {
 // MixColumns function for AES
 func MixColumns(state State) State {
 	var statePrime State
-	for col := 0; col < aesBlockSize; col++ {
+	for col := 0; col < 4; col++ {
 		statePrime[0][col] = multi2[state[0][col]] ^ multi3[state[1][col]] ^ state[2][col] ^ state[3][col]
 		statePrime[1][col] = state[0][col] ^ multi2[state[1][col]] ^ multi3[state[2][col]] ^ state[3][col]
 		statePrime[2][col] = state[0][col] ^ state[1][col] ^ multi2[state[2][col]] ^ multi3[state[3][col]]
@@ -206,6 +253,194 @@ func MixColumns(state State) State {
 	return statePrime
 }
 
+// MixColumns function for AES
+func InvMixColumns(state State) State {
+	var statePrime State
+	for col := 0; col < 4; col++ {
+		statePrime[0][col] = multi14[state[0][col]] ^ multi11[state[1][col]] ^ multi13[state[2][col]] ^ multi9[state[3][col]]
+		statePrime[1][col] = multi9[state[0][col]] ^ multi14[state[1][col]] ^ multi11[state[2][col]] ^ multi13[state[3][col]]
+		statePrime[2][col] = multi13[state[0][col]] ^ multi9[state[1][col]] ^ multi14[state[2][col]] ^ multi11[state[3][col]]
+		statePrime[3][col] = multi11[state[0][col]] ^ multi13[state[1][col]] ^ multi9[state[2][col]] ^ multi14[state[3][col]]
+	}
+	return statePrime
+}
+
+// SubWord function for the Key Schedule Expansion
+func SubWord(fourByteWord []byte) []byte {
+	var result []byte
+	result = append(result, sbox[fourByteWord[0]])
+	result = append(result, sbox[fourByteWord[1]])
+	result = append(result, sbox[fourByteWord[2]])
+	result = append(result, sbox[fourByteWord[3]])
+	return result
+}
+
+// RotWord function for the Key Schedule Expansion
+func RotWord(fourByteWord []byte) []byte {
+	var result []byte
+	result = append(result, fourByteWord[1])
+	result = append(result, fourByteWord[2])
+	result = append(result, fourByteWord[3])
+	result = append(result, fourByteWord[0])
+	return result
+}
+
+// Rcon function for the Key Schedule Expansion
+func Rcon(i int) []byte {
+	return []byte{rcon[i], '\x00', '\x00', '\x00'}
+}
+
+// KeyExpansion function for the Key Schedule Expansion
+func KeyExpansion(key []byte, aesNk int, aesNr int) []byte {
+	var w = make([]byte, aesBlockSize*(aesNr+1)*4)
+	var temp = make([]byte, 4)
+
+	for i := 0; i < aesNk; i++ {
+		copy(w[i*4:i*4+4], key[4*i:4*i+4])
+	}
+
+	for i := aesNk; i < aesBlockSize*(aesNr+1); i++ {
+		word := i - 1
+		start := word * 4
+		end := word*4 + 4
+		copy(temp[0:4], w[start:end])
+		if i%aesNk == 0 {
+			temp = utils.XOR(SubWord(RotWord(temp)), Rcon(i/aesNk))
+		} else if aesNk > 6 && i%aesNk == 4 {
+			temp = SubWord(temp)
+		}
+		copy(w[i*4:i*4+4], utils.XOR(w[4*(i-aesNk):4*(i-aesNk)+4], temp))
+	}
+	return w
+}
+
+// AddRouncKey function from 5.1.4
+func AddRoundKey(state State, keyScheduleSection []byte) State {
+	var statePrime State
+	keyScheduleAsState := arrayToState(keyScheduleSection)
+	for col := 0; col < 4; col++ {
+		for row := 0; row < 4; row++ {
+			statePrime[row][col] = state[row][col] ^ keyScheduleAsState[row][col]
+		}
+	}
+	return statePrime
+}
+
+func prettyPrintState(state State) {
+	fmt.Println("\n")
+	for i := 0; i < 4; i++ {
+		row := state[i]
+		fmt.Printf("%v\n", utils.BytesToHexString(row[0:4]))
+	}
+	fmt.Println("\n")
+}
+
+func arrayToState(a []byte) State {
+	var state State
+	for row := 0; row < 4; row++ {
+		for col := 0; col < 4; col++ {
+			state[row][col] = a[row+col*4]
+		}
+	}
+	return state
+}
+
+func stateToArray(state State) []byte {
+	var a []byte
+	for col := 0; col < 4; col++ {
+		for row := 0; row < 4; row++ {
+			a = append(a, state[row][col])
+		}
+	}
+	return a
+}
+
+func Aes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
+	if len(plaintext) != 16 {
+		return nil, errors.New("Plaintext must be 16 bytes")
+	}
+
+	var state State = arrayToState(plaintext)
+
+	keySchedule := KeyExpansion(key, aes128KeySize, aes128Rounds)
+
+	state = AddRoundKey(state, keySchedule[0:4*4])
+
+	for round := 1; round <= aes128Rounds-1; round++ {
+		state = SubBytes(state)
+		state = ShiftRows(state)
+		state = MixColumns(state)
+		state = AddRoundKey(state, keySchedule[round*4*4:(round*4*4)+4*4])
+	}
+
+	state = SubBytes(state)
+
+	state = ShiftRows(state)
+
+	state = AddRoundKey(state, keySchedule[aes128Rounds*4*4:(aes128Rounds*4*4)+4*4])
+
+	return stateToArray(state), nil
+}
+
+func Aes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+	if len(ciphertext) != 16 {
+		return nil, errors.New("Ciphertext must be 16 bytes")
+	}
+
+	var state State = arrayToState(ciphertext)
+
+	keySchedule := KeyExpansion(key, aes128KeySize, aes128Rounds)
+
+	state = AddRoundKey(state, keySchedule[aes128Rounds*4*4:(aes128Rounds*4*4)+4*4])
+
+	for round := aes128Rounds - 1; round >= 1; round-- {
+		state = InvShiftRows(state)
+		state = InvSubBytes(state)
+		state = AddRoundKey(state, keySchedule[round*4*4:(round*4*4)+4*4])
+		state = InvMixColumns(state)
+	}
+
+	state = InvSubBytes(state)
+
+	state = InvShiftRows(state)
+
+	state = AddRoundKey(state, keySchedule[0:4*4])
+
+	return stateToArray(state), nil
+}
+
+func testAes128() {
+	var input = []byte{
+		'\x00', '\x11', '\x22', '\x33', '\x44', '\x55', '\x66', '\x77',
+		'\x88', '\x99', '\xaa', '\xbb', '\xcc', '\xdd', '\xee', '\xff'}
+
+	var key = []byte{
+		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
+		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f'}
+
+	// test encryption
+	ciphertext, err := Aes128Encrypt(input, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(utils.BytesToHexString(ciphertext))
+
+	// test decryption
+	plaintext, err := Aes128Decrypt(ciphertext, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(utils.BytesToHexString(plaintext))
+}
+
 func main() {
-	fmt.Println(MixColumns(sampleState))
+	key := []byte("YELLOW SUBMARINE")
+	buf := utils.Base64ToBytes(cipherFileName)
+	for i := 0; i < len(buf)/16; i++ {
+		plaintext, err := Aes128Decrypt(buf[i*16:i*16+16], key)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf(string(plaintext))
+	}
 }

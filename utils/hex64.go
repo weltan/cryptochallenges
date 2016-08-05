@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"encoding/base64"
 	"encoding/hex"
+	"io/ioutil"
 	"strconv"
 )
 
@@ -29,4 +31,10 @@ func ItoHexString(i int) string {
 
 func BytesToHexString(result []byte) string {
 	return hex.EncodeToString(result)
+}
+
+func Base64ToBytes(fileName string) []byte {
+	base64Buf, _ := ioutil.ReadFile(fileName)
+	buf, _ := base64.StdEncoding.DecodeString(string(base64Buf))
+	return buf
 }
