@@ -350,7 +350,23 @@ func stateToArray(state State) []byte {
 	return a
 }
 
-func Aes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
+// uses PKCS7
+func pad(a []byte) []byte {
+	k := 16
+	padding := byte(k - (len(a) % k))
+	paddedArray := a
+	for i := 0; i < int(padding); i++ {
+		paddedArray = append(paddedArray, padding)
+	}
+	return paddedArray
+}
+
+func unpad(a []byte) []byte {
+	padding := int(a[len(a)-1])
+	return a[:len(a)-padding]
+}
+
+func aes128EncryptBlock(plaintext []byte, key []byte) ([]byte, error) {
 	if len(plaintext) != 16 {
 		return nil, errors.New("Plaintext must be 16 bytes")
 	}
@@ -377,7 +393,7 @@ func Aes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 	return stateToArray(state), nil
 }
 
-func Aes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+func aes128DecryptBlock(ciphertext []byte, key []byte) ([]byte, error) {
 	if len(ciphertext) != 16 {
 		return nil, errors.New("Ciphertext must be 16 bytes")
 	}
@@ -402,4 +418,29 @@ func Aes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	state = AddRoundKey(state, keySchedule[0:4*4])
 
 	return stateToArray(state), nil
+}
+
+func Aes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
+	paddedPlaintext := pad(plaintext)
+	var ciphertextBuf []byte
+	for i := 0; i < len(paddedPlaintext)/16; i++ {
+		a, err := aes128EncryptBlock(paddedPlaintext[i*16:i*16+16], key)
+		if err != nil {
+			return nil, errors.New(err.Error())
+		}
+		ciphertextBuf = append(ciphertextBuf, a...)
+	}
+	return ciphertextBuf, nil
+}
+
+func Aes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+	var plaintextBuf []byte
+	for i := 0; i < len(ciphertext)/16; i++ {
+		a, err := aes128DecryptBlock(ciphertext[i*16:i*16+16], key)
+		if err != nil {
+			return nil, errors.New(err.Error())
+		}
+		plaintextBuf = append(plaintextBuf, a...)
+	}
+	return unpad(plaintextBuf), nil
 }
