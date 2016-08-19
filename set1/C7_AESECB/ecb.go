@@ -19,14 +19,14 @@ func testAes128() {
 		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f'}
 
 	// test encryption
-	ciphertext, err := utils.Aes128Encrypt(input, key)
+	ciphertext, err := utils.ECBAes128Encrypt(input, key)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(utils.BytesToHexString(ciphertext))
 
 	// test decryption
-	plaintext, err := utils.Aes128Decrypt(ciphertext, key)
+	plaintext, err := utils.ECBAes128Decrypt(ciphertext, key)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func main() {
 	key := []byte("YELLOW SUBMARINE")
 	buf := utils.Base64ToBytes(cipherFileName)
 	for i := 0; i < len(buf)/16; i++ {
-		plaintext, err := utils.Aes128Decrypt(buf[i*16:i*16+16], key)
+		plaintext, err := utils.ECBAes128Decrypt(buf[i*16:i*16+16], key)
 		if err != nil {
 			log.Fatal(err)
 		}

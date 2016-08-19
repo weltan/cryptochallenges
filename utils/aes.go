@@ -420,7 +420,7 @@ func aes128DecryptBlock(ciphertext []byte, key []byte) ([]byte, error) {
 	return stateToArray(state), nil
 }
 
-func Aes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
+func ECBAes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 	paddedPlaintext := pad(plaintext)
 	var ciphertextBuf []byte
 	for i := 0; i < len(paddedPlaintext)/16; i++ {
@@ -433,7 +433,7 @@ func Aes128Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 	return ciphertextBuf, nil
 }
 
-func Aes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+func ECBAes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	var plaintextBuf []byte
 	for i := 0; i < len(ciphertext)/16; i++ {
 		a, err := aes128DecryptBlock(ciphertext[i*16:i*16+16], key)
@@ -441,6 +441,47 @@ func Aes128Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 			return nil, errors.New(err.Error())
 		}
 		plaintextBuf = append(plaintextBuf, a...)
+	}
+	return unpad(plaintextBuf), nil
+}
+
+func CBCAes128Encrypt(plaintext []byte, key []byte, iv []byte) ([]byte, error) {
+	if len(iv) != 16 {
+		return nil, errors.New("Initialization Vector (iv) must be 16 bytes")
+	}
+
+	paddedPlaintext := pad(plaintext)
+	var ciphertextBuf []byte
+	currentIV := iv
+	for i := 0; i < len(paddedPlaintext)/16; i++ {
+		block := paddedPlaintext[i*16 : i*16+16]
+		xoredIVBlock := XOR(block, currentIV)
+		a, err := aes128EncryptBlock(xoredIVBlock, key)
+		if err != nil {
+			return nil, errors.New(err.Error())
+		}
+		currentIV = a
+		ciphertextBuf = append(ciphertextBuf, a...)
+	}
+	return ciphertextBuf, nil
+}
+
+func CBCAes128Decrypt(ciphertext []byte, key []byte, iv []byte) ([]byte, error) {
+	if len(iv) != 16 {
+		return nil, errors.New("Initialization Vector (iv) must be 16 bytes")
+	}
+
+	var plaintextBuf []byte
+	currentIV := iv
+	for i := 0; i < len(ciphertext)/16; i++ {
+		block := ciphertext[i*16 : i*16+16]
+		a, err := aes128DecryptBlock(block, key)
+		if err != nil {
+			return nil, errors.New(err.Error())
+		}
+		xoredIVBlock := XOR(a, currentIV)
+		currentIV = block
+		plaintextBuf = append(plaintextBuf, xoredIVBlock...)
 	}
 	return unpad(plaintextBuf), nil
 }
